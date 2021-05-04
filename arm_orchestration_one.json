@@ -1,0 +1,81 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+         "storageAccountName":{
+            "type": "string",
+            "minLength":3,
+            "maxLength":24,
+            "metadata":{
+                "description":"Unique DNS name of your storage account"
+            }
+        },
+        "planName":{
+            "type": "string"
+        },
+        "webAppName":{
+            "type": "string"
+        }
+    },
+    "functions": [],
+    "variables": {},
+    "resources": [
+
+        {
+            "name": "[parameters('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01",
+            "tags": {
+                "displayName": "storageaccount1"
+            },
+            "location": "[resourceGroup().location]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "resources": [
+            {
+            "type": "blobServices/containers",
+            "apiVersion": "2019-06-01",
+            "name":"/default/output",
+            "dependsOn": [
+                "[parameters('storageAccountName')]"
+            ]
+           },
+           {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion":"2018-02-01",
+            "name":"[parameters('planName')]",
+            "location":"[resourceGroup().location]",
+            "sku":{
+                "name":"s1"
+            }
+           },{
+               "type": "Microsoft.Web/sites",
+               "apiVersion":"2018-02-01",
+               "name":"[parameters('webAppName')]",
+               "location":"[resourceGroup().location]",
+               "dependsOn":[       
+                    "[resourceId('Microsoft.Storage/storageAccounts',parameters('planName'))]"  ,
+                    "[parameters('storageAccountName')]"
+               ],
+               "properties":{
+                   "serverFarmId":"[resourceId('Microsoft.Storage/storageAccounts/Microsoft.Web/serverfarms',parameters('planName'))]",
+                   "siteConfig":{
+                       "appSettings":[
+                           {
+                               "name":"storageAccessKey",
+                               "value":"[listKeys(parameters('storageAccountName'),'2019-06-91').keys[0].value]"
+                           }
+                       ]
+                   }
+               }
+           }
+            ]
+        }
+    ],
+    "outputs": {}
+
+
+}
